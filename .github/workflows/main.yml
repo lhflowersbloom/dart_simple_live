@@ -1,10 +1,10 @@
-name: Optimized Release Build
+name: Arm64 Release Build
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-release:
+  build-arm64:
     runs-on: ubuntu-latest
     
     steps:
@@ -22,7 +22,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'master' # 继续使用 master 解决依赖问题
+          channel: 'master'
       
       - name: Clean and Get Dependencies
         run: |
@@ -30,18 +30,17 @@ jobs:
           flutter clean
           flutter pub get
 
-      # 🟢 关键步骤 1：现场生成一个真实的签名证书 (keystore)
-      # 这是一个临时的自签名证书，密码都是 123456
+      # 🟢 1. 生成证书 (保持在 app 目录下，防止路径报错)
       - name: Generate Keystore
         run: |
-          cd simple_live_app/android
+          cd simple_live_app/android/app
           keytool -genkey -v -keystore app-release.jks \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -alias my-key-alias \
             -storepass 123456 -keypass 123456 \
             -dname "CN=SimpleLive, OU=IT, O=GitHub, L=Internet, S=Cloud, C=CN"
 
-      # 🟢 关键步骤 2：配置 key.properties 指向上面生成的证书
+      # 🟢 2. 配置路径 (保持之前的修复)
       - name: Configure Keystore Properties
         run: |
           cd simple_live_app/android
@@ -50,19 +49,17 @@ jobs:
           echo "keyAlias=my-key-alias" >> key.properties
           echo "storeFile=app-release.jks" >> key.properties
 
-      # 🟢 关键步骤 3：构建 Release 包 (并针对架构分包)
-      # --split-per-abi 会生成三个包：
-      # 1. arm64-v8a (目前90%的主流手机用这个)
-      # 2. armeabi-v7a (老旧手机)
-      # 3. x86_64 (模拟器/平板)
-      - name: Build Split Release APKs
+      # 🟢 3. 编译：指定只编译 android-arm64
+      # 这样生成的 app-release.apk 里面就只有 arm64 的库，体积小且不用切分
+      - name: Build Arm64 Only
         run: |
           cd simple_live_app
-          flutter build apk --release --split-per-abi --no-tree-shake-icons
+          flutter build apk --release --target-platform android-arm64 --no-tree-shake-icons
 
-      # 上传产物：这次你会得到 3 个小文件，而不是 1 个大文件
-      - name: Upload APKs
+      # 🟢 4. 上传
+      # 注意：单目标编译输出的文件名通常是 app-release.apk
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: simple-live-release-split
-          path: simple_live_app/build/app/outputs/flutter-apk/*.apk
+          name: simple-live-arm64
+          path: simple_live_app/build/app/outputs/flutter-apk/app-release.apk
