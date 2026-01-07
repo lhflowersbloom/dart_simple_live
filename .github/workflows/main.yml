@@ -19,20 +19,26 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      # 关键修改点：切换到 master 分支，不限制版本号，获取最新版
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'master' 
+          channel: 'master' # 保持 master 分支以解决依赖冲突
           
-      # 增加一步：清理一下缓存，防止旧依赖残留
       - name: Clean and Get Dependencies
         run: |
           cd simple_live_app
           flutter clean
           flutter pub get
 
-      # 编译 Debug 包 (无需签名)
+      # 🟢 新增步骤：创建一个假的 key.properties 文件，骗过 Gradle
+      - name: Create Dummy key.properties
+        run: |
+          cd simple_live_app/android
+          echo "storePassword=123456" > key.properties
+          echo "keyPassword=123456" >> key.properties
+          echo "keyAlias=key0" >> key.properties
+          echo "storeFile=../app/dummy.jks" >> key.properties
+
       - name: Build Debug APK
         run: |
           cd simple_live_app
