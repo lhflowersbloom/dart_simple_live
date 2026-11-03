@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Simple Live
+Name[zh_CN]=简·Live
+GenericName=Live Streaming Aggregator
+GenericName[zh_CN]=直播聚合客户端
+Comment=Watch live streams from Bilibili, Douyin, Douyu, Huya, Kuaishou, CC and Migu
+Comment[zh_CN]=聚合观看哔哩哔哩、抖音、斗鱼、虎牙、快手、网易 CC、咪咕等平台直播
+Icon=simple_live_app
+Exec=simple_live_app %U
+Terminal=false
+Categories=AudioVideo;Player;
+Keywords=live;stream;danmaku;bilibili;douyin;douyu;huya;kuaishou;
+Keywords[zh_CN]=直播;弹幕;哔哩哔哩;抖音;斗鱼;虎牙;快手;咪咕;
+StartupNotify=true
+StartupWMClass=simple_live_app

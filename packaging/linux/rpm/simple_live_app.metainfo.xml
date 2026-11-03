@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>simple_live_app.desktop</id>
+  <name>Simple Live</name>
+  <summary>多平台直播聚合客户端</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <description>
+    <p>
+      Simple Live（简·Live）是一个使用 Flutter 构建的跨平台直播聚合客户端，
+      可在同一界面浏览并观看哔哩哔哩、抖音、斗鱼、虎牙、快手、网易 CC、咪咕等平台的直播，
+      支持弹幕、画质切换与关注列表。
+    </p>
+  </description>
+  <launchable type="desktop-id">simple_live_app.desktop</launchable>
+  <url type="homepage">https://github.com/June6699/dart_simple_live</url>
+  <url type="bugtracker">https://github.com/June6699/dart_simple_live/issues</url>
+  <developer id="io.github.june6699">
+    <name>xiaoyaocz</name>
+  </developer>
+  <categories>
+    <category>AudioVideo</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+</component>

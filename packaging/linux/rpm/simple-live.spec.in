@@ -1,0 +1,104 @@
+# Simple Live (Flutter 直播聚合客户端) -- RPM 打包模板
+#
+# 本文件由 packaging/linux/build-linux-packages.sh 使用：
+# 脚本把 @VERSION@ / @RELEASE@ / @DATE@ / @ARCH@ 替换为实际值后调用 rpmbuild。
+#
+# 二进制内容取自项目官方 Linux 发行包（*-linux.deb），未做任何重新编译，
+# 仅重新组织文件布局并补充 RPM 元数据、依赖声明与桌面集成文件。
+
+%global debug_package %{nil}
+# Flutter 的 libapp.so 内含 Dart AOT 快照，strip 会破坏它
+%global __strip /bin/true
+%global __objcopy /bin/true
+
+Name:           simple-live
+Version:        @VERSION@
+Release:        @RELEASE@
+Summary:        Simple Live 多平台直播聚合客户端
+License:        GPL-3.0-or-later
+URL:            https://github.com/June6699/dart_simple_live
+Source0:        %{name}-%{version}-linux-@ARCH@.tar.gz
+
+BuildArch:      @ARCH@
+ExclusiveArch:  @ARCH@
+AutoReqProv:    yes
+
+# 显式声明的 soname 依赖（等价于自动依赖生成的结果，且跨发行版可解析）
+Requires:       libgtk-3.so.0()(64bit)
+Requires:       libgdk-3.so.0()(64bit)
+Requires:       libgio-2.0.so.0()(64bit)
+Requires:       libglib-2.0.so.0()(64bit)
+Requires:       libgobject-2.0.so.0()(64bit)
+Requires:       libcairo.so.2()(64bit)
+Requires:       libcairo-gobject.so.2()(64bit)
+Requires:       libpango-1.0.so.0()(64bit)
+Requires:       libpangocairo-1.0.so.0()(64bit)
+Requires:       libharfbuzz.so.0()(64bit)
+Requires:       libatk-1.0.so.0()(64bit)
+Requires:       libgdk_pixbuf-2.0.so.0()(64bit)
+Requires:       libfontconfig.so.1()(64bit)
+Requires:       libepoxy.so.0()(64bit)
+Requires:       libasound.so.2()(64bit)
+Requires:       libz.so.1()(64bit)
+# 播放引擎：media_kit 通过 libmpv 播放（Fedora: mpv-libs / openSUSE: libmpv2 / Debian: libmpv2）
+Requires:       libmpv.so.2()(64bit)
+Requires:       hicolor-icon-theme
+
+%description
+Simple Live（简·Live）是一个使用 Flutter 构建的跨平台直播聚合客户端，
+支持哔哩哔哩、抖音、斗鱼、虎牙、快手、网易 CC、咪咕等平台的直播观看与弹幕。
+
+本软件包由项目官方发布的 Linux 发行版重新打包为 RPM，
+可执行文件与资源与官方发行版完全一致，仅补充了 RPM 元数据、依赖声明与桌面集成文件。
+
+安装后可从应用菜单启动，或在终端执行 simple_live_app。
+
+%prep
+umask 022
+rm -rf %{name}-%{version}
+mkdir -p %{name}-%{version}
+/usr/bin/tar -xzmf %{SOURCE0} -C %{name}-%{version}
+
+%install
+# rpmbuild 的 %install 默认 umask 077，会让所有文件变成 0600/0700（普通用户无法读取/执行）
+umask 022
+rm -rf %{buildroot}
+cd %{name}-%{version}
+
+mkdir -p %{buildroot}/opt
+cp -R --no-preserve=timestamps opt/simple_live_app %{buildroot}/opt/
+# 显式修正权限：普通用户可读、可执行目录与 .so、可执行主程序
+chmod -R u=rwX,go=rX %{buildroot}/opt/simple_live_app
+chmod 0755 %{buildroot}/opt/simple_live_app/simple_live_app
+chmod 0644 %{buildroot}/opt/simple_live_app/lib/*.so
+
+install -d -m0755 %{buildroot}%{_datadir}/applications
+install -m0644 applications/simple_live_app.desktop %{buildroot}%{_datadir}/applications/
+
+install -d -m0755 %{buildroot}%{_datadir}/icons/hicolor/128x128/apps
+install -d -m0755 %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
+install -m0644 icons/128x128/simple_live_app.png %{buildroot}%{_datadir}/icons/hicolor/128x128/apps/
+install -m0644 icons/256x256/simple_live_app.png %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/
+
+install -d -m0755 %{buildroot}%{_datadir}/metainfo
+install -m0644 simple_live_app.metainfo.xml %{buildroot}%{_datadir}/metainfo/
+
+install -d -m0755 %{buildroot}%{_bindir}
+ln -sf /opt/simple_live_app/simple_live_app %{buildroot}%{_bindir}/simple_live_app
+
+# 许可证：显式安装，权限才可控（%license 的自动拷贝会沿用源文件权限）
+install -d -m0755 %{buildroot}%{_datadir}/licenses/%{name}-%{version}
+install -m0644 LICENSE %{buildroot}%{_datadir}/licenses/%{name}-%{version}/LICENSE
+
+%files
+%{_datadir}/licenses/%{name}-%{version}/LICENSE
+%{_bindir}/simple_live_app
+%{_datadir}/applications/simple_live_app.desktop
+%{_datadir}/icons/hicolor/128x128/apps/simple_live_app.png
+%{_datadir}/icons/hicolor/256x256/apps/simple_live_app.png
+%{_datadir}/metainfo/simple_live_app.metainfo.xml
+/opt/simple_live_app
+
+%changelog
+* @DATE@ Simple Live RPM packaging <noreply@localhost> - %{version}-%{release}
+- 由官方 Linux 发行版重新打包为 RPM

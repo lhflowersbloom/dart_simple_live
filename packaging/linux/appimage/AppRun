@@ -1,0 +1,34 @@
+#!/bin/sh
+# Simple Live AppImage launcher
+HERE="$(dirname "$(readlink -f "$0")")"
+APP="$HERE/opt/simple_live_app/simple_live_app"
+
+# media_kit 通过系统的 libmpv 播放，缺失时给出明确提示而不是静默崩溃
+have_mpv=0
+ldconfig -p 2>/dev/null | grep -q 'libmpv\.so\.2' && have_mpv=1
+if [ "$have_mpv" = 0 ] && [ -n "$LD_LIBRARY_PATH" ]; then
+    echo "$LD_LIBRARY_PATH" | tr ':' '\n' | while read -r d; do
+        [ -e "$d/libmpv.so.2" ] && echo found
+    done | grep -q found && have_mpv=1
+fi
+for d in /usr/lib64 /usr/lib /usr/lib/x86_64-linux-gnu; do
+    [ "$have_mpv" = 0 ] && [ -e "$d/libmpv.so.2" ] && have_mpv=1
+done
+
+if [ "$have_mpv" = 0 ]; then
+    MSG="Simple Live 需要系统的 libmpv.so.2 播放引擎：
+  Fedora:        sudo dnf install mpv-libs
+  Debian/Ubuntu: sudo apt install libmpv2
+  Arch:          sudo pacman -S mpv"
+    printf '%s\n' "$MSG" >&2
+    if [ -n "$DISPLAY$WAYLAND_DISPLAY" ] && command -v kdialog >/dev/null 2>&1; then
+        kdialog --title "Simple Live" --error "$MSG" 2>/dev/null
+    elif [ -n "$DISPLAY$WAYLAND_DISPLAY" ] && command -v zenity >/dev/null 2>&1; then
+        zenity --error --title="Simple Live" --text="$MSG" 2>/dev/null
+    fi
+    exit 1
+fi
+
+export LD_LIBRARY_PATH="$HERE/opt/simple_live_app/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export XDG_DATA_DIRS="$HERE/usr/share${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+exec "$APP" "$@"
