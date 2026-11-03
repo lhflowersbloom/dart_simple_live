@@ -1085,6 +1085,101 @@ class DouyinSite implements LiveSite {
     return room is Map && room.isNotEmpty;
   }
 
+  /// 清晰度档位（level）与拉流地图键名的对应关系。
+  ///
+  /// 以前用 `flvList.length - level` 做减法，隐含假设“拉流地图按码率降序、
+  /// 档位数与地图条目数一致”。实际并非如此：
+  /// - `flv_pull_url` / `hls_pull_url_map` 只有 FULL_HD1 / HD1 / SD1 / SD2 四个键，
+  ///   而 qualities 常有 5 档（标清/高清/超清/蓝光/原画）；
+  /// - SD1 的实际码率**低于** SD2（SD1 是 `_ld`，SD2 是 `_sd`）。
+  ///
+  /// 结果就是 标清→SD2、高清→SD1 出现倒挂，而 level 最高的“原画”算出负下标被直接丢弃。
+  /// 改成按键名显式映射，不再依赖 collection 顺序和条目数量。
+  static const Map<int, String> _levelToResolutionKey = <int, String>{
+    1: "SD1",
+    2: "HD1",
+    3: "FULL_HD1",
+    4: "FULL_HD1",
+    5: "FULL_HD1",
+  };
+
+  /// 码率由低到高。
+  static const List<String> _resolutionKeyOrder = <String>[
+    "SD2",
+    "SD1",
+    "HD1",
+    "FULL_HD1",
+  ];
+
+  /// 键名 → 码率档序（0 最低）。不依赖 map 的插入顺序。
+  static int _resolutionRank(String key) {
+    final index = _resolutionKeyOrder.indexOf(key.toUpperCase());
+    return index < 0 ? -1 : index;
+  }
+
+  /// 把 `flv_pull_url` / `hls_pull_url_map` 规整成 键名 → 地址，键名统一大写。
+  static Map<String, String> _normalizePullUrlMap(dynamic raw) {
+    final result = <String, String>{};
+    if (raw is! Map) {
+      return result;
+    }
+    raw.forEach((key, value) {
+      final url = value?.toString() ?? "";
+      if (url.isNotEmpty) {
+        result[key.toString().toUpperCase()] = url;
+      }
+    });
+    return result;
+  }
+
+  /// 优先取“该档位的标准键名”；不存在时返回可用键里**不高于该档位**的最高一条。
+  ///
+  /// 只做保守降级，绝不越级取更高码率：宁可清晰度略低，也不要让“标清”拿到
+  /// 蓝光的地址（旧代码的减法正是这么倒挂的）。
+  static String? _resolveResolutionKey(
+    Map<String, String> urlMap,
+    String? preferredKey,
+  ) {
+    if (urlMap.isEmpty) {
+      return null;
+    }
+    if (preferredKey != null && urlMap.containsKey(preferredKey)) {
+      return preferredKey;
+    }
+    final knownKeys = <String>[];
+    for (final key in urlMap.keys) {
+      if (_resolutionKeyOrder.contains(key)) {
+        knownKeys.add(key);
+      }
+    }
+    if (knownKeys.isEmpty) {
+      // 抖音换了命名：没有可比较的键名时，取第一条，保证至少能播。
+      return urlMap.keys.first;
+    }
+    if (preferredKey == null) {
+      // 未知档位：保守取已知键里最低的一条。
+      return knownKeys.first;
+    }
+    final preferredRank = _resolutionRank(preferredKey);
+    if (preferredRank < 0) {
+      return knownKeys.first;
+    }
+    // 选出 rank 不超过该档位的最高一条。
+    String best = knownKeys.first;
+    for (final key in knownKeys) {
+      if (_resolutionRank(key) <= preferredRank &&
+          _resolutionRank(key) > _resolutionRank(best)) {
+        best = key;
+      }
+    }
+    final bestRank = _resolutionRank(best);
+    if (bestRank > preferredRank) {
+      // 所有已知键都高于目标档位（例如只下发了 HD1），宁可低一档也不越级。
+      return knownKeys.first;
+    }
+    return best;
+  }
+
   @override
   Future<List<LivePlayQuality>> getPlayQualites({
     required LiveRoomDetail detail,
@@ -1107,30 +1202,41 @@ class DouyinSite implements LiveSite {
 
       var options = pullData["options"];
 
-      var qulityList = options?["qualities"];
-
+      var qulityList = options?["qualities"] as List?;
       var streamData = pullData["stream_data"]?.toString() ?? "";
 
+      if (qulityList == null || qulityList.isEmpty) {
+        return qualities;
+      }
+
       if (!streamData.startsWith('{')) {
-        var flvList = (detail.data["flv_pull_url"] as Map).values
-            .cast<String>()
-            .toList();
-        var hlsList = (detail.data["hls_pull_url_map"] as Map).values
-            .cast<String>()
-            .toList();
+        // 兜底分支：stream_data 是 "$13" 这类占位符，只能从拉流地图取地址。
+        final flvMap = _normalizePullUrlMap(detail.data["flv_pull_url"]);
+        final hlsMap = _normalizePullUrlMap(detail.data["hls_pull_url_map"]);
         for (var quality in qulityList) {
-          int level = quality["level"];
+          if (quality is! Map) {
+            continue;
+          }
+          final name = quality["name"]?.toString() ?? "";
+          final rawLevel = quality["level"];
+          final level = rawLevel is int ? rawLevel : 0;
           List<String> urls = [];
-          var flvIndex = flvList.length - level;
-          if (flvIndex >= 0 && flvIndex < flvList.length) {
-            urls.add(flvList[flvIndex]);
+
+          final preferredKey = _levelToResolutionKey[level];
+          final flvKey = _resolveResolutionKey(flvMap, preferredKey);
+          final hlsKey = _resolveResolutionKey(hlsMap, preferredKey);
+
+          final flvUrl = flvKey == null ? null : flvMap[flvKey];
+          if (flvUrl != null && flvUrl.isNotEmpty) {
+            urls.add(flvUrl);
           }
-          var hlsIndex = hlsList.length - level;
-          if (hlsIndex >= 0 && hlsIndex < hlsList.length) {
-            urls.add(hlsList[hlsIndex]);
+          final hlsUrl = hlsKey == null ? null : hlsMap[hlsKey];
+          if (hlsUrl != null && hlsUrl.isNotEmpty) {
+            urls.add(hlsUrl);
           }
+          _logDebug("画质 $level($name) -> flv=$flvKey hls=$hlsKey");
           var qualityItem = LivePlayQuality(
-            quality: quality["name"],
+            quality: name,
             sort: level,
             data: urls,
           );
@@ -1142,6 +1248,12 @@ class DouyinSite implements LiveSite {
         var qualityData = json.decode(streamData)["data"] as Map;
 
         for (var quality in qulityList) {
+          if (quality is! Map) {
+            continue;
+          }
+          final qualityName = quality["name"]?.toString() ?? "";
+          final rawSort = quality["level"];
+          final sort = rawSort is int ? rawSort : 0;
           List<String> urls = [];
 
           var flvUrl = qualityData[quality["sdk_key"]]?["main"]?["flv"]
@@ -1158,8 +1270,8 @@ class DouyinSite implements LiveSite {
           }
 
           var qualityItem = LivePlayQuality(
-            quality: quality["name"],
-            sort: quality["level"],
+            quality: qualityName,
+            sort: sort,
             data: urls,
           );
           if (urls.isNotEmpty) {
