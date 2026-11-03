@@ -21,7 +21,10 @@ Source0:        %{name}-%{version}-linux-@ARCH@.tar.gz
 
 BuildArch:      @ARCH@
 ExclusiveArch:  @ARCH@
-AutoReqProv:    yes
+# 关闭自动依赖生成：ELf 扫描会把 libdartjni.so 对 libjvm.so 的依赖也写进来，
+# 而 JVM 只在 Android 上用，Linux 端安装时却会被迫拉一个完整 JDK（~200MB）。
+# 下面用精确的 soname 列表替代，既跨发行版可解析，也不会有多余依赖。
+AutoReqProv:    no
 
 # 显式声明的 soname 依赖（等价于自动依赖生成的结果，且跨发行版可解析）
 Requires:       libgtk-3.so.0()(64bit)
