@@ -16,17 +16,24 @@ on:
         required: false
         default: false
         type: boolean
+  # 无 Actions:write 的令牌也能触发（repository_dispatch 只需 Contents: write）：
+  #   curl -X POST -H "Authorization: Bearer $TOKEN" \
+  #     https://api.github.com/repos/OWNER/REPO/dispatches \
+  #     -d '{"event_type":"build-linux-app","client_payload":{"ref":"master"}}'
+  repository_dispatch:
+    types: [build-linux-app]
 
 jobs:
   build-linux:
-    if: ${{ inputs.build_linux == true }}
+    # workflow_dispatch 走 inputs.build_linux 开关；repository_dispatch 视为已授权
+    if: ${{ github.event_name == 'repository_dispatch' || inputs.build_linux == true }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.event.client_payload.ref || 'master' }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -59,7 +66,7 @@ jobs:
         id: ref_info
         shell: bash
         run: |
-          ref_name="${{ inputs.ref }}"
+          ref_name="${{ inputs.ref || github.event.client_payload.ref || 'master' }}"
           if [[ "$ref_name" == refs/tags/* ]]; then
             ref_name="${ref_name#refs/tags/}"
           fi
@@ -79,7 +86,7 @@ jobs:
             simple_live_app/build/dist/*/*.zip
 
       - name: Upload Release
-        if: ${{ inputs.upload_release && steps.ref_info.outputs.is_tag == 'true' }}
+        if: ${{ (inputs.upload_release || github.event.client_payload.upload_release) && steps.ref_info.outputs.is_tag == 'true' }}
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.ref_info.outputs.ref_name }}
