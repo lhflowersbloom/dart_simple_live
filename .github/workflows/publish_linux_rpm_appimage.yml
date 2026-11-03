@@ -1,7 +1,15 @@
 name: linux-rpm-appimage
 
 # 把某个 release 里的 Linux .deb 转成 RPM + AppImage，并（可选）上传回同一个 release。
-# 上游只发 deb，这个 workflow 让每个版本都能顺手带上 Fedora / openSUSE 用的包。
+# 上游只发 deb，这个 workflow 让每个版本都能顺手带上 Fedora / openSUSE / Arch 用的包。
+#
+# 两种触发方式：
+#   1. Actions 页面手动 Run workflow（workflow_dispatch）
+#   2. repository_dispatch（type: build-linux-packages）
+#      curl -X POST -H "Authorization: Bearer $TOKEN" \
+#        https://api.github.com/repos/OWNER/REPO/dispatches \
+#        -d '{"event_type":"build-linux-packages","client_payload":{"tag":"v1.13.2"}}'
+#      只需要 Contents: write 权限即可触发。
 
 on:
   workflow_dispatch:
@@ -20,6 +28,8 @@ on:
         required: false
         default: June6699/dart_simple_live
         type: string
+  repository_dispatch:
+    types: [build-linux-packages]
 
 permissions:
   contents: write
@@ -39,9 +49,13 @@ jobs:
       - name: Fetch .deb from release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
-          SRC: ${{ inputs.deb_repo }}
+          TAG: ${{ inputs.tag || github.event.client_payload.tag }}
+          SRC: ${{ inputs.deb_repo || github.event.client_payload.deb_repo || 'June6699/dart_simple_live' }}
         run: |
+          if [ -z "$TAG" ]; then
+            echo "::error::缺少 tag（workflow_dispatch 填 inputs.tag，repository_dispatch 传 client_payload.tag）"
+            exit 1
+          fi
           mkdir -p build/in
           # 优先从指定仓库取 deb（fork 的 release 通常没有 deb），失败再回退到本仓库
           if ! gh release download "$TAG" --pattern "*-linux.deb" --dir build/in --repo "$SRC"; then
@@ -51,9 +65,12 @@ jobs:
           ls -lh build/in
 
       - name: Build RPM and AppImage
+        env:
+          RELEASE_NO: ${{ github.event.client_payload.release || '1' }}
         run: |
           chmod +x packaging/linux/build-linux-packages.sh
-          packaging/linux/build-linux-packages.sh --deb build/in/*-linux.deb --outdir dist
+          packaging/linux/build-linux-packages.sh \
+            --deb build/in/*-linux.deb --release "$RELEASE_NO" --outdir dist
 
       - name: Show results
         run: ls -lh dist && (cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS)
@@ -67,10 +84,10 @@ jobs:
             dist/SHA256SUMS
 
       - name: Upload to release
-        if: ${{ inputs.upload }}
+        if: ${{ inputs.upload || github.event_name == 'repository_dispatch' }}
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
+          TAG: ${{ inputs.tag || github.event.client_payload.tag }}
         run: |
           # 本仓库还没有该 release 时先建一个，再上传（--clobber 覆盖同名资产）
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Simple Live $TAG"
