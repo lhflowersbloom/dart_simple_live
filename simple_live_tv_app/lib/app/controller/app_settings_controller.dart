@@ -135,6 +135,8 @@ class AppSettingsController extends GetxController {
 
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
+    videoRenderingAcceleration.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kVideoRenderingAcceleration, true);
     chatTextSize.value = LocalStorageService.instance
         .getValue(LocalStorageService.kChatTextSize, 14.0);
 
@@ -164,6 +166,17 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kPlayerCompatMode, false);
     mpvProfile.value = LocalStorageService.instance
         .getValue(LocalStorageService.kMpvProfile, "balanced");
+    playerVolume.value = (LocalStorageService.instance.getValue(
+              LocalStorageService.kPlayerVolume,
+              100.0,
+            ) as num? ??
+            100.0)
+        .clamp(0.0, 300.0)
+        .toDouble();
+    volumeBoostEnable.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kVolumeBoostEnable,
+      false,
+    );
 
     playerAutoPause.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerAutoPause, false);
@@ -196,9 +209,10 @@ class AppSettingsController extends GetxController {
       false,
     );
     autoSwitchListMode.value = LocalStorageService.instance.getValue(
-      LocalStorageService.kAutoSwitchListMode,
-      0,
-    ) == 1
+              LocalStorageService.kAutoSwitchListMode,
+              0,
+            ) ==
+            1
         ? 1
         : 0;
 
@@ -291,6 +305,13 @@ class AppSettingsController extends GetxController {
     hardwareDecode.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kHardwareDecode, e);
+  }
+
+  var videoRenderingAcceleration = true.obs;
+  void setVideoRenderingAcceleration(bool value) {
+    videoRenderingAcceleration.value = value;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kVideoRenderingAcceleration, value);
   }
 
   var chatTextSize = 14.0.obs;
@@ -564,6 +585,31 @@ class AppSettingsController extends GetxController {
     mpvProfile.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kMpvProfile, e);
   }
+
+  /// 播放器音量（0-300）：>100 为 mpv 软件增益档（讨论 #161）。
+  var playerVolume = 100.0.obs;
+  void setPlayerVolume(double e) {
+    playerVolume.value = e.clamp(0.0, 300.0).toDouble();
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kPlayerVolume,
+      playerVolume.value,
+    );
+  }
+
+  /// 音量增强开关：开启后音量上限扩展至 300%，>100 为播放器软件增益（讨论 #161）。
+  var volumeBoostEnable = false.obs;
+  void setVolumeBoostEnable(bool e) {
+    volumeBoostEnable.value = e;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kVolumeBoostEnable,
+      e,
+    );
+  }
+
+  /// 当前生效音量：按"音量增强"开关钳制（关 = 上限 100）。
+  double get effectivePlayerVolume => volumeBoostEnable.value
+      ? playerVolume.value.clamp(0.0, 300.0).toDouble()
+      : playerVolume.value.clamp(0.0, 100.0).toDouble();
 
   var playerBufferSize = 32.obs;
   void setPlayerBufferSize(int e) {

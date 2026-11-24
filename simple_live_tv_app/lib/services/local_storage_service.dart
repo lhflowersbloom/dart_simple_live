@@ -17,6 +17,21 @@ class LocalStorageService extends GetxService {
   /// 首页排序
   static const String kHomeSort = "HomeSort";
 
+  /// 内置默认 IPTV 源是否已初始化
+  static const String kIptvDefaultInited = "IptvDefaultInited";
+  static const String kIptvSourceEnabled = "IptvSourceEnabled";
+  static const String kIptvCustomSources = "IptvCustomSources";
+  static const String kIptvDeletedSources = "IptvDeletedSources";
+
+  /// IPTV 聚合频道缓存（JSON，含时间戳），冷启动秒开与断网兜底
+  static const String kIptvAggregatedCache = "IptvAggregatedCache";
+  /// IPTV 上次手动选择的线路源名称，起播时优先命中
+  static const String kIptvPreferredLineSource = "IptvPreferredLineSource";
+  static const String kIptvRefreshScope = "IptvRefreshScope";
+  static const String kIptvSourceHealth = "IptvSourceHealth";
+  static const String kIptvLineKnownStatus = "IptvLineKnownStatus";
+  static const String kIptvAutoRefreshOnEnter = "IptvAutoRefreshOnEnter";
+
   /// 多开布局间距
   static const String kMultiRoomGap = "MultiRoomGap";
 
@@ -85,6 +100,10 @@ class LocalStorageService extends GetxService {
   /// 硬件解码
   static const String kHardwareDecode = "HardwareDecode";
 
+  /// Windows 视频纹理渲染加速，与硬件解码独立。
+  static const String kVideoRenderingAcceleration =
+      "VideoRenderingAcceleration";
+
   /// 聊天区文字大小
   static const String kChatTextSize = "ChatTextSize";
 
@@ -126,6 +145,9 @@ class LocalStorageService extends GetxService {
   static const String kPlayerClockEnable = "PlayerClockEnable";
   static const String kPlayerClockPosition = "PlayerClockPosition";
 
+  /// 自定义分区列表（与移动端备份/局域网同步共享）
+  static const String kCustomCategories = "CustomCategories";
+
   /// 播放器缓冲区大小
   static const String kPlayerBufferSize = "PlayerBufferSize";
   static const String kPlayerForceHttps = "PlayerForceHttps";
@@ -138,6 +160,7 @@ class LocalStorageService extends GetxService {
   static const String kAutoSwitchListMode = "AutoSwitchListMode";
   static const String kAutoSwitchListItems = "AutoSwitchListItems";
   static const String kPlayerVolume = "PlayerVolume";
+  static const String kVolumeBoostEnable = "VolumeBoostEnable";
   static const String kLogEnable = "LogEnable";
   static const String kMpvProfile = "MpvProfile";
 

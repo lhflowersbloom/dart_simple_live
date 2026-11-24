@@ -74,6 +74,61 @@ Widget _buildCornerClock(LiveRoomController controller) {
   );
 }
 
+/// 音量 OSD：遥控器/设置面板调节音量时短暂显示（讨论 #161）
+Widget _buildVolumeOSD(LiveRoomController controller) {
+  return Obx(() {
+    if (!controller.showVolumeOSDState.value) {
+      return const SizedBox.shrink();
+    }
+    final volume = controller.volumeOSDValue.value;
+    final progress = (volume / 300).clamp(0.0, 1.0);
+    final boost = volume > 100;
+    return IgnorePointer(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: 140.w),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.w),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(12.w),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "音量 ${volume.round()}%${boost ? "（增强）" : ""}",
+                  style: AppStyle.titleStyleWhite,
+                ),
+                SizedBox(height: 12.w),
+                Container(
+                  width: 320.w,
+                  height: 10.w,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(5.w),
+                  ),
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: progress,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: boost ? Colors.amber : Colors.white,
+                        borderRadius: BorderRadius.circular(5.w),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  });
+}
+
 Widget buildControls(VideoState videoState, LiveRoomController controller) {
   return Stack(
     children: [
@@ -81,6 +136,7 @@ Widget buildControls(VideoState videoState, LiveRoomController controller) {
       buildDanmuView(videoState, controller),
       _buildLiveEventFlowOverlay(controller),
       _buildCornerClock(controller),
+      _buildVolumeOSD(controller),
       // 点击播放器打开设置
       Positioned.fill(
         child: GestureDetector(onTap: () => showPlayerSettings(controller)),
@@ -477,6 +533,8 @@ void showPlayerSettings(LiveRoomController controller) {
   var lineFoucsNode = AppFocusNode();
   var scaleFoucsNode = AppFocusNode();
   var clockFoucsNode = AppFocusNode();
+  var volumeFoucsNode = AppFocusNode();
+  var volumeBoostFoucsNode = AppFocusNode();
   var danmakuFoucsNode = AppFocusNode();
   var danmakuSizeFoucsNode = AppFocusNode();
   var danmakuSpeedFoucsNode = AppFocusNode();
@@ -662,6 +720,48 @@ void showPlayerSettings(LiveRoomController controller) {
                       : 0,
                   onChanged: (e) {
                     AppSettingsController.instance.setPlayerClockEnable(e == 1);
+                  },
+                ),
+              ),
+              AppStyle.vGap24,
+              Obx(
+                () {
+                  // 步长 10，范围随"音量增强"开关：关 = 0-100，开 = 0-300；
+                  // value 取整到 key 对齐，避免遥控器 ±5 调出的中间值
+                  // 让左右切换时 indexOf 找不到
+                  final boost =
+                      AppSettingsController.instance.volumeBoostEnable.value;
+                  final maxVolume = boost ? 300 : 100;
+                  final current =
+                      AppSettingsController.instance.playerVolume.value;
+                  final snapped =
+                      ((current / 10).round() * 10).clamp(0, maxVolume);
+                  return SettingsItemWidget(
+                    foucsNode: volumeFoucsNode,
+                    title: "音量",
+                    items: {
+                      for (var v = 0; v <= maxVolume; v += 10)
+                        v: v > 100 ? "$v%（增强）" : "$v%",
+                    },
+                    value: snapped,
+                    onChanged: (e) {
+                      controller.adjustVolume((e as int) - current);
+                    },
+                  );
+                },
+              ),
+              AppStyle.vGap24,
+              Obx(
+                () => SettingsItemWidget(
+                  foucsNode: volumeBoostFoucsNode,
+                  title: "音量增强",
+                  items: const {0: "关", 1: "开"},
+                  value:
+                      AppSettingsController.instance.volumeBoostEnable.value
+                          ? 1
+                          : 0,
+                  onChanged: (e) {
+                    controller.setVolumeBoostEnabled(e == 1);
                   },
                 ),
               ),

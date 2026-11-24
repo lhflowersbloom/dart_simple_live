@@ -56,12 +56,26 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     value: controller.hardwareDecode.value,
                     subtitle: Platform.isIOS
                         ? "建议保持开启；关闭后更耗电，仅在排查黑屏时临时使用"
-                        : "播放失败可尝试关闭此选项",
+                        : Platform.isWindows
+                            ? "关闭后使用软件解码，优先于高级解码参数；重新进入直播间后生效"
+                            : "播放失败可尝试关闭此选项",
                     onChanged: (e) {
                       controller.setHardwareDecode(e);
                     },
                   ),
                 ),
+                if (Platform.isWindows) ...[
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "视频渲染加速",
+                      subtitle: "控制视频画面的 GPU 渲染，与硬件解码独立；"
+                          "关闭后软件输出最高 1080p，CPU 占用可能上升；重新进入直播间后生效",
+                      value: controller.videoRenderingAcceleration.value,
+                      onChanged: controller.setVideoRenderingAcceleration,
+                    ),
+                  ),
+                ],
                 if (Platform.isIOS) AppStyle.divider,
                 if (Platform.isIOS)
                   Obx(
@@ -123,8 +137,7 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                   Obx(
                     () => SettingsMenu<String>(
                       title: "全屏方向",
-                      subtitle:
-                          "平板锁定竖屏时选“强制横屏”；Android 16 大屏设备会忽略应用的强制方向请求",
+                      subtitle: "平板锁定竖屏时选“强制横屏”；Android 16 大屏设备会忽略应用的强制方向请求",
                       value: controller.fullscreenOrientation.value,
                       valueMap: const {
                         "smart": "智能（推荐）",
@@ -208,8 +221,7 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                   Obx(
                     () => SettingsSwitch(
                       title: "与其他应用同时播放",
-                      subtitle:
-                          "开启后不再申请音频焦点，可能与其它应用同时出声；来电、蓝牙/车机等场景可能异常",
+                      subtitle: "开启后不再申请音频焦点，可能与其它应用同时出声；来电、蓝牙/车机等场景可能异常",
                       value: controller.allowConcurrentAudio.value,
                       onChanged: (e) {
                         controller.setAllowConcurrentAudio(e);
@@ -278,6 +290,29 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               ],
             ),
           ),
+          // 音量增强
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
+              "音量",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              children: [
+                Obx(
+                  () => SettingsSwitch(
+                    title: "音量增强（0-300%）",
+                    subtitle:
+                        "开启后音量上限扩展至 300%，超过 100% 为播放器软件增益，部分直播间音量偏小时有用；音源响度大时可能破音",
+                    value: controller.volumeBoostEnable.value,
+                    onChanged: controller.setVolumeBoostEnable,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
             child: Text(
@@ -290,7 +325,9 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // 小窗弹幕设置（桌面端）
-                if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) ...[
+                if (Platform.isWindows ||
+                    Platform.isLinux ||
+                    Platform.isMacOS) ...[
                   Padding(
                     padding: AppStyle.edgeInsetsA12,
                     child: Text(
@@ -305,13 +342,16 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     () => SettingsNumber(
                       title: "小窗字体缩放",
                       subtitle: "相对于正常播放时的弹幕大小",
-                      value: (controller.smallWindowDanmuScale.value * 10).round(),
+                      value:
+                          (controller.smallWindowDanmuScale.value * 10).round(),
                       min: 5,
                       max: 10,
                       step: 1,
                       unit: "",
-                      displayValue: "${(controller.smallWindowDanmuScale.value * 10).round() / 10}x",
-                      onChanged: (v) => controller.setSmallWindowDanmuScale(v / 10),
+                      displayValue:
+                          "${(controller.smallWindowDanmuScale.value * 10).round() / 10}x",
+                      onChanged: (v) =>
+                          controller.setSmallWindowDanmuScale(v / 10),
                     ),
                   ),
                   AppStyle.divider,
@@ -339,7 +379,10 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                 ],
                 // PIP弹幕设置（Android）
                 if (Platform.isAndroid) ...[
-                  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) AppStyle.divider,
+                  if (Platform.isWindows ||
+                      Platform.isLinux ||
+                      Platform.isMacOS)
+                    AppStyle.divider,
                   Padding(
                     padding: AppStyle.edgeInsetsA12,
                     child: Text(
@@ -368,8 +411,32 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                       max: 20,
                       step: 1,
                       unit: "",
-                      displayValue: "${(controller.pipDanmuScale.value * 20).round() / 20}x",
+                      displayValue:
+                          "${(controller.pipDanmuScale.value * 20).round() / 20}x",
                       onChanged: (v) => controller.setPipDanmuScale(v / 20),
+                    ),
+                  ),
+                ],
+                // iOS 小窗（画中画）
+                if (Platform.isIOS) ...[
+                  AppStyle.divider,
+                  Padding(
+                    padding: AppStyle.edgeInsetsA12,
+                    child: Text(
+                      "iOS 小窗（画中画）",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Get.theme.primaryColor,
+                      ),
+                    ),
+                  ),
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "后台保持画面",
+                      subtitle:
+                          "切后台后小窗持续显示直播画面（软解码渲染，略增耗电）；关闭后进小窗更快更省电，后台画面停住、声音正常",
+                      value: controller.pipKeepBackgroundVideo.value,
+                      onChanged: controller.setPipKeepBackgroundVideo,
                     ),
                   ),
                 ],

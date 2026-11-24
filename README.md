@@ -21,6 +21,7 @@
 
 - fork 来源：[原作者仓库 xiaoyaocz/dart_simple_live](https://github.com/xiaoyaocz/dart_simple_live)
 - 当前公开仓库：`June6699/dart_simple_live`
+- 想自己开发功能、提交 PR：[CONTRIBUTING.md](/CONTRIBUTING.md)，从环境搭建到 AI 协作的完整流程都在里面
 
 ## 支持项目
 
@@ -150,6 +151,35 @@ TV 下载建议：
 - 哔哩哔哩直播
 - 抖音直播
 - 快手直播
+
+## IPTV 公开直播源说明
+本项目 IPTV 功能所有直播源均来自公开开源项目，完整保留作者原始内容、公告频道、赞助提示，不做任何过滤或删除，尊重所有原作者的权益与劳动。
+
+### 源列表与作者信息
+| 源名称 | 作者 | 项目地址 | 开源协议 | 说明 |
+| --- | --- | --- | --- | --- |
+| suxuang全量源 | suxuang | [suxuang/myIPTV](https://github.com/suxuang/myIPTV) | 项目开源 | 全量多节点源，频道覆盖全面，每日自动更新 |
+| vbskycn 全量源 | vbskycn | [vbskycn/iptv](https://github.com/vbskycn/iptv) | 项目开源 | 427 个频道，覆盖完整央视、卫视与地方省份台，每 6 小时自动更新 |
+| zhi35聚合源 | zhi35 | [zhi35/iptv](https://github.com/zhi35/iptv) | 项目开源 | 每日 3 更，含港澳台与直播中国慢直播，IPv4+IPv6 |
+| fanmingming咪咕源 | fanmingming | [fanmingming/live](https://github.com/fanmingming/live) | GPL-3.0 | 最知名公开源，咪咕/央视频 CDN 189 频道，每日多更 |
+| fanmingmingIPv6源 | fanmingming | [fanmingming/live](https://github.com/fanmingming/live) | GPL-3.0 | 经典 IPv6 列表，需终端支持 IPv6 网络 |
+| hujingguang实时源 | hujingguang | [hujingguang/ChinaIPTV](https://github.com/hujingguang/ChinaIPTV) | 项目开源 | 405 频道央视+省市台，小时级近实时更新 |
+| hacks.tools日更源 | hacks.tools | [iptv.hacks.tools](https://iptv.hacks.tools/) | 项目开源 | 每日多次更新，卫视/地方/电影/儿童丰富 |
+| xisohi全量源 | xisohi | [xisohi/CHINA-IPTV](https://github.com/xisohi/CHINA-IPTV) | 项目开源 | TXT 格式 1200+ 条，含教育台与台港澳 |
+| iptv-org国际源 | iptv-org | [iptv-org/iptv](https://github.com/iptv-org/iptv) | Unlicense | 全球 11000+ 频道，国际频道为主 |
+| DataShare海外源 | DataShare-duo | [DataShare-duo/IPTV-Source](https://github.com/DataShare-duo/IPTV-Source) | 项目开源 | 海外节点直连，CDN加速，适配境外网络，央视频道完整 |
+| peterh 镜像源 | peterhchina | [peterhchina.github.io/iptv/](https://peterhchina.github.io/iptv/) | 项目开源 | 全量源同步镜像，每日自动更新 |
+
+全部源地址的详细实测数据（频道数、协议分布、镜像链、专项列表）见仓库根目录 `IPTV_SOURCES.md`。刷新时可选仅更新部分源，不喜欢的源可停用或删除。
+
+### 作者重要提示
+根据 vbskycn 源官方说明：
+> 不观看节目的时候建议退出软件，保持后台运行会让设备持续全速运行，浪费电力、占用网络带宽，同时消耗源服务器带宽，加速设备老化。如果服务器检测到设备异常浪费大量带宽，可能会自动封禁对应 IP 地址。
+
+### 分流与容灾逻辑
+- 首次启动会从前 3 个全量源中随机选择一个作为默认，避免所有用户集中访问同一服务器，自动分摊流量压力。
+- 每个源配置多个镜像地址，单地址 5 秒连接超时后自动切换，所有源全部无法访问才会报错，用户无需手动操作。
+- 所有源内的作者公告、赞助宣传频道均完整保留，不会被自动过滤。
 
 ## APP 支持平台
 

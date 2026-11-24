@@ -13,6 +13,12 @@ import 'package:simple_live_tv_app/modules/history/history_controller.dart';
 import 'package:simple_live_tv_app/modules/history/history_page.dart';
 import 'package:simple_live_tv_app/modules/home/home_controller.dart';
 import 'package:simple_live_tv_app/modules/home/home_page.dart';
+import 'package:simple_live_tv_app/modules/iptv/channels/iptv_channels_controller.dart';
+import 'package:simple_live_tv_app/modules/iptv/channels/iptv_channels_page.dart';
+import 'package:simple_live_tv_app/modules/iptv/player/iptv_player_controller.dart';
+import 'package:simple_live_tv_app/modules/iptv/player/iptv_player_page.dart';
+import 'package:simple_live_tv_app/modules/iptv/playlist/iptv_source_manage_controller.dart';
+import 'package:simple_live_tv_app/modules/iptv/playlist/iptv_source_manage_page.dart';
 import 'package:simple_live_tv_app/modules/hot_live/hot_live_controller.dart';
 import 'package:simple_live_tv_app/modules/hot_live/hot_live_page.dart';
 import 'package:simple_live_tv_app/modules/live_room/live_room_controller.dart';
@@ -116,6 +122,24 @@ class AppPages {
       bindings: [
         BindingsBuilder.put(() => HistoryController()),
       ],
+    ),
+    // IPTV 频道浏览
+    GetPage(
+      name: RoutePath.kIptvChannels,
+      page: () => const IptvChannelsPage(),
+      binding: BindingsBuilder.put(() => IptvChannelsController()),
+    ),
+    // IPTV 直播源管理
+    GetPage(
+      name: RoutePath.kIptvSourceManage,
+      page: () => const IptvSourceManagePage(),
+      binding: BindingsBuilder.put(() => IptvSourceManageController()),
+    ),
+    // IPTV 播放
+    GetPage(
+      name: RoutePath.kIptvPlayer,
+      page: () => const IptvPlayerPage(),
+      binding: BindingsBuilder.put(() => IptvPlayerController()),
     ),
     //热门直播
     GetPage(
